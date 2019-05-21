@@ -45,7 +45,8 @@ Command line flags will override environment variables
 // Webhook handler implements handler.Handler interface,
 // Notify event to Webhook channel
 type Webhook struct {
-	Url string
+	Url     string
+	Headers map[string]string
 }
 
 type WebhookMessage struct {
@@ -82,7 +83,7 @@ func notifyWebhook(m *Webhook, obj interface{}, action string) {
 
 	webhookMessage := prepareWebhookMessage(e, m)
 
-	err := postMessage(m.Url, webhookMessage)
+	err := postMessage(m.Url, m.Headers, webhookMessage)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
@@ -106,7 +107,7 @@ func prepareWebhookMessage(e kbEvent.Event, m *Webhook) *WebhookMessage {
 
 }
 
-func postMessage(url string, webhookMessage *WebhookMessage) error {
+func postMessage(url string, headers map[string]string, webhookMessage *WebhookMessage) error {
 	message, err := json.Marshal(webhookMessage)
 	if err != nil {
 		return err
@@ -117,6 +118,10 @@ func postMessage(url string, webhookMessage *WebhookMessage) error {
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
+
+	for header, value := range headers {
+		req.Header.Add(header, value)
+	}
 
 	client := &http.Client{}
 	_, err = client.Do(req)
